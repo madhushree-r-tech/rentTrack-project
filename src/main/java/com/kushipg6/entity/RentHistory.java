@@ -1,31 +1,30 @@
 package com.kushipg6.entity;
 
-import com.kushipg6.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "rent_history")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Payment {
+public class RentHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
+    @JoinColumn(name = "room_id", nullable = false)
+    private Room room;
 
     @Column(nullable = false)
-    private double amountPaid;
+    private double oldRent;
 
     @Column(nullable = false)
-    private String month;
+    private double newRent;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PaymentStatus status;
+    private LocalDate changedAt;
 }

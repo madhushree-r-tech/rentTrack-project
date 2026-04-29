@@ -21,8 +21,7 @@ public class PaymentService {
     private TenantRepository tenantRepository;
 
     // Record a payment
-    public Payment recordPayment(Long tenantId, double amountPaid, String month) {
-
+    public Payment recordPayment(Long tenantId, double amountPaid, String month, PaymentStatus status) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Tenant not found with id: " + tenantId));
