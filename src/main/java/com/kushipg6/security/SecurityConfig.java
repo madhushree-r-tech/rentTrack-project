@@ -25,16 +25,13 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints - no token needed
                 .requestMatchers("/api/auth/**").permitAll()
-                // Owner only endpoints
                 .requestMatchers("/api/owner/**").hasAuthority("ROLE_OWNER")
-                // Warden only endpoints
-                .requestMatchers("/api/rooms/**").hasAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/tenants/**").hasAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/payments/**").hasAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/branches/**").hasAuthority("ROLE_WARDEN")
-                // Everything else needs authentication
+                .requestMatchers("/api/warden/**").hasAnyAuthority("ROLE_WARDEN")
+                .requestMatchers("/api/rooms/**").hasAnyAuthority("ROLE_WARDEN")
+                .requestMatchers("/api/tenants/**").hasAnyAuthority("ROLE_WARDEN")
+                .requestMatchers("/api/payments/**").hasAnyAuthority("ROLE_WARDEN")
+                .requestMatchers("/api/branches/**").hasAnyAuthority("ROLE_WARDEN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
