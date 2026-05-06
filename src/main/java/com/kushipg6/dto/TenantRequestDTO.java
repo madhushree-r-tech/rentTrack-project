@@ -11,5 +11,8 @@ public class TenantRequestDTO {
     private Long roomId;
     private String name;
     private String phone;
+    private String email;
+    private String address;
+    private String emergencyContact;
     private LocalDate joiningDate;
 }

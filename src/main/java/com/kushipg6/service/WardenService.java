@@ -1,5 +1,6 @@
 package com.kushipg6.service;
 
+import com.kushipg6.dto.UnpaidTenantInfo;
 import com.kushipg6.dto.WardenDashboardDTO;
 import com.kushipg6.entity.Payment;
 import com.kushipg6.entity.Room;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +35,7 @@ public class WardenService {
     @Autowired
     private PaymentRepository paymentRepository;
 
-    public WardenDashboardDTO getDashboard(String wardenEmail) {
+    public WardenDashboardDTO getDashboard(String wardenEmail, String month) {
 
         User warden = userRepository.findByEmail(wardenEmail)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -46,31 +48,41 @@ public class WardenService {
 
         Long branchId = warden.getBranch().getId();
         String branchName = warden.getBranch().getBranchName();
-        String currentMonth = LocalDate.now()
-                .format(DateTimeFormatter.ofPattern("MMMM-yyyy"));
 
+        String selectedMonth = (month != null && !month.isEmpty())
+                ? month
+                : LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM-yyyy"));
+
+        // Get all rooms in one query
         List<Room> rooms = roomRepository.findByBranchId(branchId);
         int totalRooms = rooms.size();
 
-        List<Tenant> allTenants = rooms.stream()
-                .flatMap(room -> tenantRepository.findByRoomId(room.getId()).stream())
-                .collect(Collectors.toList());
+        // Get all tenants in one query
+        List<Long> roomIds = rooms.stream().map(Room::getId).collect(Collectors.toList());
+        List<Tenant> allTenants = tenantRepository.findByRoomIdIn(roomIds);
         int totalTenants = allTenants.size();
 
+        // Group tenants by room
+        Map<Long, List<Tenant>> tenantsByRoom = allTenants.stream()
+                .collect(Collectors.groupingBy(t -> t.getRoom().getId()));
+
         int occupiedRooms = (int) rooms.stream()
-                .filter(room -> !tenantRepository.findByRoomId(room.getId()).isEmpty())
+                .filter(room -> tenantsByRoom.containsKey(room.getId()))
                 .count();
-        int vacantRooms = totalRooms - occupiedRooms;
+
+        // Vacancy = total beds - total tenants
+        int totalBeds = rooms.stream().mapToInt(Room::getCapacity).sum();
+        int vacantBeds = totalBeds - totalTenants;
 
         double totalExpected = allTenants.stream()
                 .mapToDouble(t -> t.getRoom().getRent())
                 .sum();
 
+        // Get paid payments in one query
         List<Payment> paidPayments = paymentRepository
-                .findByMonthAndStatus(currentMonth, PaymentStatus.PAID)
+                .findByMonthAndStatus(selectedMonth, PaymentStatus.PAID)
                 .stream()
-                .filter(p -> rooms.stream()
-                        .anyMatch(r -> r.getId().equals(p.getTenant().getRoom().getId())))
+                .filter(p -> roomIds.contains(p.getTenant().getRoom().getId()))
                 .collect(Collectors.toList());
 
         double totalCollected = paidPayments.stream()
@@ -83,16 +95,21 @@ public class WardenService {
                 .map(p -> p.getTenant().getName())
                 .collect(Collectors.toList());
 
-        List<String> unpaidTenants = allTenants.stream()
+        List<UnpaidTenantInfo> unpaidTenants = allTenants.stream()
                 .filter(t -> !paidTenantNames.contains(t.getName()))
-                .map(Tenant::getName)
+                .map(t -> new UnpaidTenantInfo(
+                        t.getName(),
+                        t.getPhone(),
+                        t.getRoom().getRoomName()
+                ))
                 .collect(Collectors.toList());
 
         return new WardenDashboardDTO(
                 branchName,
+                selectedMonth,
                 totalRooms,
                 occupiedRooms,
-                vacantRooms,
+                vacantBeds,
                 totalTenants,
                 totalExpected,
                 totalCollected,

@@ -1,17 +1,25 @@
 package com.kushipg6.service;
 
 import com.kushipg6.dto.ProratedRentResponseDTO;
+import com.kushipg6.dto.TenantPaymentHistoryDTO;
+import com.kushipg6.entity.Payment;
 import com.kushipg6.entity.Room;
 import com.kushipg6.entity.Tenant;
 import com.kushipg6.exception.ResourceNotFoundException;
 import com.kushipg6.exception.RoomFullException;
+import com.kushipg6.repository.PaymentRepository;
 import com.kushipg6.repository.RoomRepository;
 import com.kushipg6.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TenantService {
@@ -22,7 +30,15 @@ public class TenantService {
     @Autowired
     private RoomRepository roomRepository;
 
-    public Tenant addTenant(Long roomId, String name, String phone, LocalDate joiningDate) {
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    public Tenant addTenant(Long roomId, String name, String phone,
+                            String email, String address, String emergencyContact,
+                            LocalDate joiningDate, MultipartFile profilePicture) throws IOException {
 
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -38,8 +54,16 @@ public class TenantService {
         Tenant tenant = new Tenant();
         tenant.setName(name);
         tenant.setPhone(phone);
+        tenant.setEmail(email);
+        tenant.setAddress(address);
+        tenant.setEmergencyContact(emergencyContact);
         tenant.setRoom(room);
         tenant.setJoiningDate(joiningDate);
+
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(profilePicture);
+            tenant.setProfilePicture(imageUrl);
+        }
 
         return tenantRepository.save(tenant);
     }
@@ -48,8 +72,13 @@ public class TenantService {
         return tenantRepository.findAll();
     }
 
-    public Tenant transferTenant(Long tenantId, Long newRoomId) {
+    public Tenant getTenantById(Long tenantId) {
+        return tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tenant not found with id: " + tenantId));
+    }
 
+    public Tenant transferTenant(Long tenantId, Long newRoomId) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Tenant not found with id: " + tenantId));
@@ -76,8 +105,51 @@ public class TenantService {
         return tenantRepository.save(tenant);
     }
 
-    public ProratedRentResponseDTO calculateProratedRent(Long tenantId) {
+    public Tenant updateProfilePicture(Long tenantId, MultipartFile file) throws IOException {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tenant not found with id: " + tenantId));
+        String imageUrl = cloudinaryService.uploadImage(file);
+        tenant.setProfilePicture(imageUrl);
+        return tenantRepository.save(tenant);
+    }
 
+    public List<TenantPaymentHistoryDTO> getPaymentHistory(Long tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tenant not found with id: " + tenantId));
+
+        List<TenantPaymentHistoryDTO> history = new ArrayList<>();
+
+        for (int i = 0; i < 5; i++) {
+            LocalDate date = LocalDate.now().minusMonths(i);
+            String month = date.format(DateTimeFormatter.ofPattern("MMMM-yyyy"));
+
+            List<Payment> payments = paymentRepository.findByMonth(month)
+                    .stream()
+                    .filter(p -> p.getTenant().getId().equals(tenantId))
+                    .collect(Collectors.toList());
+
+            if (!payments.isEmpty()) {
+                Payment p = payments.get(0);
+                history.add(new TenantPaymentHistoryDTO(
+                        month,
+                        p.getStatus().name(),
+                        p.getAmountPaid()
+                ));
+            } else {
+                history.add(new TenantPaymentHistoryDTO(
+                        month,
+                        "UNPAID",
+                        tenant.getRoom().getRent()
+                ));
+            }
+        }
+
+        return history;
+    }
+
+    public ProratedRentResponseDTO calculateProratedRent(Long tenantId) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Tenant not found with id: " + tenantId));
@@ -90,11 +162,9 @@ public class TenantService {
         }
 
         double fullRent = tenant.getRoom().getRent();
-
         YearMonth yearMonth = YearMonth.of(joiningDate.getYear(), joiningDate.getMonth());
         int daysInMonth = yearMonth.lengthOfMonth();
         int daysStayed = daysInMonth - joiningDate.getDayOfMonth() + 1;
-
         double proratedRent = (fullRent / daysInMonth) * daysStayed;
         proratedRent = Math.round(proratedRent * 100.0) / 100.0;
 

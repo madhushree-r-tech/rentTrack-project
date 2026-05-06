@@ -15,8 +15,10 @@ public class WardenController {
     private WardenService wardenService;
 
     @GetMapping("/dashboard")
-    public ResponseEntity<WardenDashboardDTO> getDashboard(Authentication authentication) {
+    public ResponseEntity<WardenDashboardDTO> getDashboard(
+            Authentication authentication,
+            @RequestParam(value = "month", required = false) String month) {
         String wardenEmail = authentication.getName();
-        return ResponseEntity.ok(wardenService.getDashboard(wardenEmail));
+        return ResponseEntity.ok(wardenService.getDashboard(wardenEmail, month));
     }
 }

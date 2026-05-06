@@ -23,6 +23,18 @@ public class Tenant {
     private String phone;
 
     @Column(nullable = true)
+    private String email;
+
+    @Column(nullable = true)
+    private String address;
+
+    @Column(nullable = true)
+    private String emergencyContact;
+
+    @Column(nullable = true)
+    private String profilePicture;
+
+    @Column(nullable = true)
     private LocalDate joiningDate;
 
     @ManyToOne

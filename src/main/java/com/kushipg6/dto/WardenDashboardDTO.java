@@ -9,6 +9,7 @@ import java.util.List;
 public class WardenDashboardDTO {
 
     private String branchName;
+    private String month;
     private int totalRooms;
     private int occupiedRooms;
     private int vacantRooms;
@@ -16,5 +17,5 @@ public class WardenDashboardDTO {
     private double totalExpectedRent;
     private double totalCollectedRent;
     private double totalPendingRent;
-    private List<String> unpaidTenants;
+    private List<UnpaidTenantInfo> unpaidTenants;
 }
