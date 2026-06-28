@@ -49,8 +49,15 @@ public class TenantController {
         try {
             return ResponseEntity.ok(tenantService.getTenantById(id));
         } catch (Exception e) {
-            System.out.println("Error fetching tenant: " + e.getMessage());
-            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/deactivate")
+    public ResponseEntity<?> deactivateTenant(@PathVariable("id") Long id) {
+        try {
+            return ResponseEntity.ok(tenantService.deactivateTenant(id));
+        } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
@@ -87,8 +94,6 @@ public class TenantController {
         try {
             return ResponseEntity.ok(tenantService.getPaymentHistory(id));
         } catch (Exception e) {
-            System.out.println("Error fetching payment history: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }

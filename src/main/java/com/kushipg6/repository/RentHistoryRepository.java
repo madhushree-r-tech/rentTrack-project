@@ -7,5 +7,5 @@ import java.util.List;
 
 @Repository
 public interface RentHistoryRepository extends JpaRepository<RentHistory, Long> {
-    List<RentHistory> findByRoomIdOrderByChangedAtDesc(Long roomId);
+    List<RentHistory> findByRoomId(Long roomId);
 }

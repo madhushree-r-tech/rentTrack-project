@@ -37,8 +37,14 @@ public class Tenant {
     @Column(nullable = true)
     private LocalDate joiningDate;
 
+    @Column(nullable = true)
+    private String status = "ACTIVE";
+
+    @Column(nullable = true)
+    private LocalDate vacatedDate;
+
     @ManyToOne
     @JoinColumn(name = "room_id")
-    @JsonIgnoreProperties({"capacity", "rent"})
+    @JsonIgnoreProperties({"capacity"})
     private Room room;
 }

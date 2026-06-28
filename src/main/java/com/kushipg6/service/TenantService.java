@@ -44,7 +44,7 @@ public class TenantService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Room not found with id: " + roomId));
 
-        int currentTenants = tenantRepository.findByRoomId(roomId).size();
+        int currentTenants = tenantRepository.findByRoomIdAndStatus(roomId, "ACTIVE").size();
 
         if (currentTenants >= room.getCapacity()) {
             throw new RoomFullException(
@@ -59,6 +59,7 @@ public class TenantService {
         tenant.setEmergencyContact(emergencyContact);
         tenant.setRoom(room);
         tenant.setJoiningDate(joiningDate);
+        tenant.setStatus("ACTIVE");
 
         if (profilePicture != null && !profilePicture.isEmpty()) {
             String imageUrl = cloudinaryService.uploadImage(profilePicture);
@@ -69,13 +70,25 @@ public class TenantService {
     }
 
     public List<Tenant> getAllTenants() {
-        return tenantRepository.findAll();
+        return tenantRepository.findAll()
+                .stream()
+                .filter(t -> !"INACTIVE".equals(t.getStatus()))
+                .collect(Collectors.toList());
     }
 
     public Tenant getTenantById(Long tenantId) {
         return tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Tenant not found with id: " + tenantId));
+    }
+
+    public Tenant deactivateTenant(Long tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tenant not found with id: " + tenantId));
+        tenant.setStatus("INACTIVE");
+        tenant.setVacatedDate(LocalDate.now());
+        return tenantRepository.save(tenant);
     }
 
     public Tenant transferTenant(Long tenantId, Long newRoomId) {
@@ -87,7 +100,7 @@ public class TenantService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Room not found with id: " + newRoomId));
 
-        int currentTenants = tenantRepository.findByRoomId(newRoomId).size();
+        int currentTenants = tenantRepository.findByRoomIdAndStatus(newRoomId, "ACTIVE").size();
         if (currentTenants >= newRoom.getCapacity()) {
             throw new RoomFullException(
                     "Room " + newRoom.getRoomName() + " is full. Capacity: " + newRoom.getCapacity());
@@ -121,8 +134,18 @@ public class TenantService {
 
         List<TenantPaymentHistoryDTO> history = new ArrayList<>();
 
+        LocalDate joiningDate = tenant.getJoiningDate();
+        if (joiningDate == null) joiningDate = LocalDate.now();
+
         for (int i = 0; i < 5; i++) {
             LocalDate date = LocalDate.now().minusMonths(i);
+
+            if (date.getYear() < joiningDate.getYear() ||
+                (date.getYear() == joiningDate.getYear() &&
+                 date.getMonthValue() < joiningDate.getMonthValue())) {
+                continue;
+            }
+
             String month = date.format(DateTimeFormatter.ofPattern("MMMM-yyyy"));
 
             List<Payment> payments = paymentRepository.findByMonth(month)

@@ -1,17 +1,14 @@
 package com.kushipg6.service;
 
-import com.kushipg6.dto.RoomResponseDTO;
-import com.kushipg6.entity.PgBranch;
-import com.kushipg6.entity.RentHistory;
 import com.kushipg6.entity.Room;
+import com.kushipg6.entity.RentHistory;
 import com.kushipg6.exception.ResourceNotFoundException;
-import com.kushipg6.repository.PgBranchRepository;
 import com.kushipg6.repository.RentHistoryRepository;
 import com.kushipg6.repository.RoomRepository;
 import com.kushipg6.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,30 +19,17 @@ public class RoomService {
     private RoomRepository roomRepository;
 
     @Autowired
-    private TenantRepository tenantRepository;
-
-    @Autowired
     private RentHistoryRepository rentHistoryRepository;
 
     @Autowired
-    private PgBranchRepository pgBranchRepository;
+    private TenantRepository tenantRepository;
 
     public Room addRoom(Room room) {
         return roomRepository.save(room);
     }
 
-    public List<RoomResponseDTO> getAllRoomsWithVacancy() {
-        return roomRepository.findAll().stream().map(room -> {
-            int currentTenants = tenantRepository.findByRoomId(room.getId()).size();
-            RoomResponseDTO dto = new RoomResponseDTO();
-            dto.setId(room.getId());
-            dto.setRoomName(room.getRoomName());
-            dto.setCapacity(room.getCapacity());
-            dto.setRent(room.getRent());
-            dto.setCurrentTenants(currentTenants);
-            dto.setVacancy(room.getCapacity() - currentTenants);
-            return dto;
-        }).collect(Collectors.toList());
+    public List<Room> getAllRooms() {
+        return roomRepository.findAll();
     }
 
     public Room updateRent(Long roomId, double newRent) {
@@ -57,7 +41,7 @@ public class RoomService {
         history.setRoom(room);
         history.setOldRent(room.getRent());
         history.setNewRent(newRent);
-        history.setChangedAt(LocalDate.now());
+        history.setChangedAt(LocalDateTime.now());
         rentHistoryRepository.save(history);
 
         room.setRent(newRent);
@@ -65,31 +49,28 @@ public class RoomService {
     }
 
     public List<RentHistory> getRentHistory(Long roomId) {
-        return rentHistoryRepository.findByRoomIdOrderByChangedAtDesc(roomId);
+        return rentHistoryRepository.findByRoomId(roomId);
     }
 
-    public Room assignBranch(Long roomId, Long branchId) {
+    public Room updateBranch(Long roomId, Long branchId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Room not found with id: " + roomId));
-        PgBranch branch = pgBranchRepository.findById(branchId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Branch not found with id: " + branchId));
-        room.setBranch(branch);
+        room.setBranch(null);
         return roomRepository.save(room);
     }
 
-    public List<RoomResponseDTO> getRoomsByBranch(Long branchId) {
-        return roomRepository.findByBranchId(branchId).stream().map(room -> {
-            int currentTenants = tenantRepository.findByRoomId(room.getId()).size();
-            RoomResponseDTO dto = new RoomResponseDTO();
-            dto.setId(room.getId());
-            dto.setRoomName(room.getRoomName());
-            dto.setCapacity(room.getCapacity());
-            dto.setRent(room.getRent());
-            dto.setCurrentTenants(currentTenants);
-            dto.setVacancy(room.getCapacity() - currentTenants);
-            return dto;
-        }).collect(Collectors.toList());
+    public List<Room> getRoomsByBranch(Long branchId) {
+        return roomRepository.findByBranchId(branchId);
+    }
+
+    public List<Room> getAvailableRooms() {
+        List<Room> allRooms = roomRepository.findAll();
+        return allRooms.stream()
+                .filter(room -> {
+                    int currentTenants = tenantRepository.findByRoomId(room.getId()).size();
+                    return currentTenants < room.getCapacity();
+                })
+                .collect(Collectors.toList());
     }
 }

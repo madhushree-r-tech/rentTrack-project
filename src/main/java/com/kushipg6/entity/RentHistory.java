@@ -2,7 +2,7 @@ package com.kushipg6.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "rent_history")
@@ -26,5 +26,5 @@ public class RentHistory {
     private double newRent;
 
     @Column(nullable = false)
-    private LocalDate changedAt;
+    private LocalDateTime changedAt;
 }
