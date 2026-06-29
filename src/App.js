@@ -5,6 +5,7 @@ import WardenDashboard from './pages/WardenDashboard';
 import Tenants from './pages/Tenants';
 import TenantProfile from './pages/TenantProfile';
 import OwnerDashboard from './pages/OwnerDashboard';
+import Complaints from './pages/Complaints';
 
 function App() {
     return (
@@ -16,6 +17,7 @@ function App() {
                 <Route path="/warden/dashboard" element={<WardenDashboard />} />
                 <Route path="/warden/tenants" element={<Tenants />} />
                 <Route path="/warden/tenant/:id" element={<TenantProfile />} />
+                <Route path="/warden/complaints" element={<Complaints />} />
                 <Route path="/owner/dashboard" element={<OwnerDashboard />} />
             </Routes>
         </BrowserRouter>
