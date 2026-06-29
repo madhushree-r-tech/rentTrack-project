@@ -30,8 +30,6 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
-
-        // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered!");
         }
@@ -43,7 +41,6 @@ public class AuthService {
         user.setPhone(request.getPhone());
         user.setRole(UserRole.valueOf(request.getRole()));
 
-        // If warden, link to branch
         if (request.getRole().equals("ROLE_WARDEN")) {
             PgBranch branch = pgBranchRepository.findByBranchName(request.getBranchName())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -61,12 +58,12 @@ public class AuthService {
                 refreshToken,
                 user.getRole().name(),
                 user.getName(),
-                user.getBranch() != null ? user.getBranch().getBranchName() : "All Branches"
+                user.getBranch() != null ? user.getBranch().getBranchName() : "All Branches",
+                user.getBranch() != null ? user.getBranch().getId() : null
         );
     }
 
     public AuthResponseDTO login(LoginRequestDTO request) {
-
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with email: " + request.getEmail()));
@@ -83,7 +80,8 @@ public class AuthService {
                 refreshToken,
                 user.getRole().name(),
                 user.getName(),
-                user.getBranch() != null ? user.getBranch().getBranchName() : "All Branches"
+                user.getBranch() != null ? user.getBranch().getBranchName() : "All Branches",
+                user.getBranch() != null ? user.getBranch().getId() : null
         );
     }
 }

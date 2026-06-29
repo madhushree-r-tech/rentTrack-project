@@ -12,4 +12,5 @@ public class AuthResponseDTO {
     private String role;
     private String name;
     private String branchName;
+    private Long branchId;
 }

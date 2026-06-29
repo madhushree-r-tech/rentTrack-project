@@ -33,14 +33,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/owner/**").hasAuthority("ROLE_OWNER")
                 .requestMatchers("/api/warden/**").hasAnyAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/rooms/**").hasAnyAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/tenants/**").hasAnyAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/payments/**").hasAnyAuthority("ROLE_WARDEN")
-                .requestMatchers("/api/branches/**").hasAnyAuthority("ROLE_WARDEN")
+                .requestMatchers("/api/rooms/**").hasAnyAuthority("ROLE_WARDEN", "ROLE_OWNER")
+                .requestMatchers("/api/tenants/**").hasAnyAuthority("ROLE_WARDEN", "ROLE_OWNER")
+                .requestMatchers("/api/payments/**").hasAnyAuthority("ROLE_WARDEN", "ROLE_OWNER")
+                .requestMatchers("/api/branches/**").hasAnyAuthority("ROLE_WARDEN", "ROLE_OWNER")
+                .requestMatchers("/api/complaints/**").hasAnyAuthority("ROLE_WARDEN", "ROLE_OWNER")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
@@ -51,7 +51,6 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
